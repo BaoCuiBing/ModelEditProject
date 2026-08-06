@@ -41,10 +41,23 @@ window.initModelEditor = function(containerElement, buildSceneCallback) { // 编
                 <i data-lucide="focus" class="w-4 h-4 text-sky-500"></i>
                 <span>鸟瞰全景</span>
             </button>
-            <button onclick="importModel()" class="btn btn-secondary text-xs" title="导入 js 模型文件重建场景">
-                <i data-lucide="file-plus" class="w-4 h-4 text-emerald-500"></i>
-                <span>导入</span>
-            </button>
+            <div class="relative">
+                <button onclick="toggleImportMenu(event)" class="btn btn-secondary text-xs" title="导入模型">
+                    <i data-lucide="file-plus" class="w-4 h-4 text-emerald-500"></i>
+                    <span>导入</span>
+                    <i data-lucide="chevron-down" class="w-3 h-3 text-[var(--apple-muted-foreground)]"></i>
+                </button>
+                <div id="import-menu" class="hidden absolute right-0 top-full mt-1 glass-panel rounded-xl shadow-xl border border-[var(--apple-border)] z-50 min-w-[170px] py-1">
+                    <button onclick="importModel()" class="w-full text-left px-3 py-2 text-xs hover:bg-sky-500/10 flex items-center space-x-2">
+                        <i data-lucide="file-plus" class="w-3.5 h-3.5 text-emerald-500"></i>
+                        <span>导入（重建场景）</span>
+                    </button>
+                    <button onclick="appendImportModel()" class="w-full text-left px-3 py-2 text-xs hover:bg-sky-500/10 flex items-center space-x-2">
+                        <i data-lucide="file-plus-2" class="w-3.5 h-3.5 text-sky-500"></i>
+                        <span>附加导入（追加到场景）</span>
+                    </button>
+                </div>
+            </div>
             <input type="file" id="model-file-input" accept=".js" class="hidden" onchange="handleModelFileSelected(this.files[0])">
             <button id="toggle-theme" class="btn btn-secondary !w-9 !p-0 rounded-lg" title="切换主题">
                 <i data-lucide="moon" class="w-4 h-4"></i>
@@ -167,6 +180,8 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
     window.copyTransform = copyTransform; // 暴露复制变换值方法
     window.copyToClipboard = copyToClipboard; // 暴露复制文本方法
     window.importModel = importModel; // 暴露导入模型方法
+    window.appendImportModel = appendImportModel; // 暴露附加导入方法
+    window.toggleImportMenu = toggleImportMenu; // 暴露导入下拉菜单切换方法
     window.handleModelFileSelected = handleModelFileSelected; // 暴露文件选择处理方法
     lucide.createIcons(); // 初始化 Lucide 图标
     const htmlEl = document.documentElement; // 获取根 html 元素
@@ -190,6 +205,7 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
     let targetCamPos = new THREE.Vector3(0, 24, 28); // 相机目标位置
     let targetCamLookAt = new THREE.Vector3(0, 0.8, 0); // 相机注视目标
     let isFlying = false; // 相机飞行动画开关
+    let importMode = 'replace'; // 导入模式：'replace' 重建场景 / 'append' 附加到现有场景
     // 保存对象的当前状态（用于撤回）
     function saveTransformState(object) { // 保存对象变换状态
         return { // 返回状态对象
@@ -468,19 +484,51 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
         flyTo(0, 24, 28, 0, 0.8, 0); // 飞行到默认视角
     }
     // 触发隐藏的文件选择器
-    function importModel() { // 打开模型文件选择器
+    function importModel() { // 打开模型文件选择器（重建场景模式）
+        importMode = 'replace'; // 设置导入模式为重建
+        closeImportMenu(); // 关闭下拉菜单
         const fileInput = document.getElementById('model-file-input'); // 获取文件输入框
         if (fileInput) { // 输入框存在
-            console.log('[模型导入] 打开文件选择器'); // 打印日志
+            console.log('[模型导入] 打开文件选择器（重建场景）'); // 打印日志
             fileInput.click(); // 触发点击
         } else { // 输入框缺失
             console.error('[模型导入] 未找到文件选择器 #model-file-input'); // 打印错误
         }
     }
-    // 用户选择 js 文件后：读取、执行脚本并重建场景
+    // 附加导入：把新模型追加到现有场景，不清空当前场景
+    function appendImportModel() { // 打开模型文件选择器（附加模式）
+        importMode = 'append'; // 设置导入模式为附加
+        closeImportMenu(); // 关闭下拉菜单
+        const fileInput = document.getElementById('model-file-input'); // 获取文件输入框
+        if (fileInput) { // 输入框存在
+            console.log('[模型导入] 打开文件选择器（附加导入）'); // 打印日志
+            fileInput.click(); // 触发点击
+        } else { // 输入框缺失
+            console.error('[模型导入] 未找到文件选择器 #model-file-input'); // 打印错误
+        }
+    }
+    // 切换导入下拉菜单显隐
+    function toggleImportMenu(event) { // 切换导入菜单
+        if (event) event.stopPropagation(); // 阻止冒泡，避免触发外部关闭
+        const menu = document.getElementById('import-menu'); // 获取菜单元素
+        if (menu) menu.classList.toggle('hidden'); // 切换显隐
+    }
+    // 关闭导入下拉菜单
+    function closeImportMenu() { // 关闭导入菜单
+        const menu = document.getElementById('import-menu'); // 获取菜单元素
+        if (menu) menu.classList.add('hidden'); // 隐藏菜单
+    }
+    // 点击页面其他区域时关闭导入下拉菜单
+    document.addEventListener('click', (e) => { // 绑定全局点击
+        const menu = document.getElementById('import-menu'); // 获取菜单元素
+        if (menu && !menu.classList.contains('hidden') && !e.target.closest('#import-menu') && !e.target.closest('[onclick="toggleImportMenu(event)"]')) { // 点击菜单外区域
+            closeImportMenu(); // 关闭菜单
+        }
+    });
+    // 用户选择 js 文件后：读取、执行脚本并重建/附加场景
     function handleModelFileSelected(file) { // 处理模型文件选择
         if (!file) return; // 无文件则返回
-        console.log('[模型导入] 已选择文件:', file.name, '| 大小:', file.size, 'bytes'); // 打印文件信息
+        console.log('[模型导入] 已选择文件:', file.name, '| 大小:', file.size, 'bytes', '| 模式:', importMode); // 打印文件信息
         const reader = new FileReader(); // 创建文件读取器
         reader.onload = (e) => { // 文件读取完成回调
             const code = e.target.result; // 获取文件代码文本
@@ -500,8 +548,13 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
                 const buildFn = findBuildFunction(prevBuildKeys, extractBuildFunctionNames(code)); // 查找构建函数
                 if (buildFn) { // 找到构建函数
                     console.log('[模型导入] 匹配到构建函数:', buildFn.name); // 打印函数名
-                    rebuildScene(buildFn); // 重建场景
-                    showToast(`导入成功: ${file.name} → ${buildFn.name}`); // 显示成功提示
+                    if (importMode === 'append') { // 附加模式
+                        appendScene(buildFn); // 附加到现有场景
+                        showToast(`附加导入成功: ${file.name} → ${buildFn.name}`); // 显示成功提示
+                    } else { // 重建模式
+                        rebuildScene(buildFn); // 重建场景
+                        showToast(`导入成功: ${file.name} → ${buildFn.name}`); // 显示成功提示
+                    }
                 } else { // 未找到构建函数
                     console.warn('[模型导入] 未找到 (THREE, group) 签名的构建函数'); // 打印警告
                     showToast('导入失败: 未找到 (THREE, group) 签名的构建函数'); // 显示失败提示
@@ -519,6 +572,33 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
             showToast('导入失败: 文件读取错误'); // 显示错误提示
         };
         reader.readAsText(file); // 以文本方式读取文件
+    }
+    // 附加导入：把新构建函数生成的对象挂到现有主组下，不清空当前场景
+    function appendScene(buildFn) { // 附加场景
+        const appendGroup = new THREE.Group(); // 创建附加分组
+        appendGroup.name = "📦 附加导入场景"; // 设置分组名称
+        console.log('[模型导入] 调用构建函数（附加）:', buildFn.name); // 打印函数名
+        buildFn(THREE, appendGroup); // 调用构建函数
+        // 去除被导入模型自带的所有灯光（场景灯光由主场景统一管理，避免重复叠加）
+        const lightsToRemove = []; // 收集待移除的灯光对象
+        appendGroup.traverse((obj) => { // 遍历附加分组所有子对象
+            if (obj.isLight) { // 灯光对象
+                lightsToRemove.push(obj); // 记录灯光
+            }
+        });
+        lightsToRemove.forEach((light) => { // 逐个移除灯光
+            if (light.parent) light.parent.remove(light); // 从父节点移除
+        });
+        parkMasterGroup.add(appendGroup); // 附加分组挂到主组下
+        // 统一关闭所有网格/线对象的视锥体裁切，防止缩小视角时大模型被误判剔除
+        appendGroup.traverse((obj) => { // 遍历附加分组所有子对象
+            if (obj.isMesh || obj.isLine) { // 网格或线对象
+                obj.frustumCulled = false; // 关闭视锥体裁切
+            }
+        });
+        clearSelection(); // 清除选中
+        buildOutlinerTree(); // 重建大纲树
+        console.log('[模型导入] 附加完成，主组子对象数:', parkMasterGroup.children.length); // 打印结果
     }
     // 从导入文件代码文本中提取 build 开头的函数名（优先匹配文件内声明的构建函数）
     function extractBuildFunctionNames(code) { // 提取文件内构建函数名
