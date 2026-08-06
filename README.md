@@ -166,6 +166,57 @@ function buildFountain(THREE, group) {
 2. **页面内「导入」按钮**：点击顶部「导入」选择 `model_xxx.js`，编辑器会读取、执行脚本、自动匹配 `build` 开头的双参函数并重建场景。
 3. **直接改 HTML**：把第 3 个 `<script>` 换成你的文件与函数即可。
 
+### 6. 在 HTML 内联模型（无需外部 js 文件）
+
+不想单独建文件时，可以直接把构建函数写进 HTML 的 `<script>` 内联。**注意**：函数必须命名为 `build` 开头且接收 `(THREE, group)` 两个参数，否则页面内「导入」时不会被识别。
+
+```html
+<!-- 引用外部模型文件时注释掉即可（可选） -->
+<!-- <script src="./school_model/school_diji_model.js"></script> -->
+
+<script>
+    function buildInlineDemoScene(THREE, group) { // 内联构建函数，build 开头 + 双参
+        // 灯光
+        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+        ambient.name = "环境光";
+        group.add(ambient);
+
+        const sun = new THREE.DirectionalLight(0xfffbeb, 1.2);
+        sun.position.set(10, 20, 10);
+        sun.castShadow = true;
+        sun.name = "太阳平行光";
+        group.add(sun);
+
+        // 地面（平面需绕 X 轴旋转 -90° 平铺）
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(20, 20),
+            new THREE.MeshStandardMaterial({ color: 0x48bb78 })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        ground.name = "绿色草坪";
+        group.add(ground);
+
+        // 方块
+        const box = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2, 2),
+            new THREE.MeshStandardMaterial({ color: 0xf97316 })
+        );
+        box.position.set(0, 1, 0);
+        box.castShadow = true;
+        box.name = "橙色方块";
+        group.add(box);
+    }
+
+    const container = document.getElementById('app');
+    window.initModelEditor(container, buildInlineDemoScene); // 传入内联函数
+</script>
+```
+
+说明：
+- 若想临时换回外部模型，取消第 15-16 行 `<script src="./school_model/school_diji_model.js">` 的注释，并把 `buildInlineDemoScene` 改回 `buildMySchoolScene` 即可。
+- 内联函数同样遵循第 3 节编写规范（命名、灯光、阴影、分组、动画等）。
+
 ---
 
 ## 三、已知问题与修复记录
