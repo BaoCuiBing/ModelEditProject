@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 学校场景编辑器 - 模型加载版</title>
+</head>
+<body class="h-full m-0 overflow-hidden">
+    <!-- 编辑器挂载点 -->
+    <div id="app" class="h-full w-full flex flex-col overflow-hidden"></div>
+
+    <!-- 编辑器核心逻辑（注入界面与 three.js） -->
+    <script src="./modeledit.js"></script>
+
+    <!-- 学校地基模型（定义 buildMySchoolScene 构建函数） -->
+    <script src="./school_model/school_diji_model.js"></script>
+
+    <script>
+        // 初始化编辑器并挂载学校地基场景
+        const container = document.getElementById('app');
+        window.initModelEditor(container, buildMySchoolScene);
+    </script>
+</body>
+</html>
