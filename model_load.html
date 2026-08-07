@@ -12,13 +12,124 @@
     <!-- 编辑器核心逻辑（注入界面与 three.js） -->
     <script src="./modeledit.js"></script>
 
-    <!-- 学校地基模型（定义 buildMySchoolScene 构建函数） -->
-    <script src="./school_model/school_diji_model.js"></script>
+    <!-- 校园地基与全套建筑模型库 -->
+    <script src="./models/foundation.js"></script>
+    <script src="./models/stadium_model.js"></script>
+    <script src="./models/canteen_model.js"></script>
+    <script src="./models/park_model.js"></script>
+    <script src="./models/fountain_model.js"></script>
+    <script src="./models/library_model.js"></script>
+    <script src="./models/teaching_building_model.js"></script>
+    <script src="./models/gymnasium_model.js"></script>
+    <script src="./models/volleyball_model.js"></script>
+    <script src="./models/gate_model.js"></script>
+    <script src="./models/dormitory_model.js"></script>
+    <!-- 拆分的 13 个独立精细建筑模型 -->
+    <script src="./models/dormitory1_model.js"></script>
+    <script src="./models/dormitory3_model.js"></script>
+    <script src="./models/dormitory5_model.js"></script>
+    <script src="./models/dormitory10_model.js"></script>
+    <script src="./models/library_new_model.js"></script>
+    <script src="./models/canteen1_model.js"></script>
+    <script src="./models/canteen2_model.js"></script>
+    <script src="./models/admin_building_model.js"></script>
+    <script src="./models/teaching_building_b_model.js"></script>
+    <script src="./models/training_building_c_model.js"></script>
+    <script src="./models/training_building_e_model.js"></script>
+    <script src="./models/teaching_building_c_heng_model.js"></script>
+    <script src="./models/teaching_building_c_zong_model.js"></script>
 
     <script>
-        // 初始化编辑器并挂载学校地基场景
+        // 初始化编辑器并挂载校园全景场景
+        function buildCombinedScene(THREE, group) {
+            buildFoundationScene(THREE, group);
+
+            // 挂载 13 个独立的精细 3D 建筑
+            buildDormitory1Model(THREE, group);
+            buildDormitory3Model(THREE, group);
+            buildDormitory5Model(THREE, group);
+            buildDormitory10Model(THREE, group);
+            buildLibraryNewModel(THREE, group);
+            buildCanteen1Model(THREE, group);
+            buildCanteen2Model(THREE, group);
+            buildAdminBuildingModel(THREE, group);
+            buildTeachingBuildingBModel(THREE, group);
+            buildTrainingBuildingCModel(THREE, group);
+            buildTrainingBuildingEModel(THREE, group);
+            buildTeachingBuildingCHengModel(THREE, group);
+            buildTeachingBuildingCZongModel(THREE, group);
+
+            const stadiumGroup = new THREE.Group();
+            stadiumGroup.name = "操场模型";
+            stadiumGroup.position.set(0.00, 0.30, -244.61);
+            buildStadiumModel(THREE, stadiumGroup);
+            group.add(stadiumGroup);
+
+            const canteenGroup = new THREE.Group();
+            canteenGroup.name = "食堂模型";
+            canteenGroup.position.set(180.00, 0.30, 172.50);
+            canteenGroup.scale.set(1.5, 1.5, 1.5);
+            buildCanteenModel(THREE, canteenGroup);
+            group.add(canteenGroup);
+
+            const parkGroup = new THREE.Group();
+            parkGroup.name = "公园模型";
+            parkGroup.position.set(0.00, 0.30, 97.95);
+            parkGroup.scale.set(3, 3, 3);
+            buildMyParkScene(THREE, parkGroup);
+            group.add(parkGroup);
+
+            const fountainGroup = new THREE.Group();
+            fountainGroup.name = "喷泉模型";
+            fountainGroup.position.set(0.00, 0.30, 321.60);
+            fountainGroup.scale.set(1.4, 1.4, 1.4);
+            buildFountainModel(THREE, fountainGroup);
+            group.add(fountainGroup);
+
+            const libraryGroup = new THREE.Group();
+            libraryGroup.name = "图书馆模型";
+            libraryGroup.position.set(-1.78, 0.30, 206.72);
+            buildLibraryModel(THREE, libraryGroup);
+            group.add(libraryGroup);
+
+            const teachingBuildingGroup = new THREE.Group();
+            teachingBuildingGroup.name = "教学楼模型";
+            teachingBuildingGroup.position.set(183.43, 0.30, 259.25);
+            teachingBuildingGroup.scale.set(1.4, 1.4, 1.4);
+            buildTeachingBuildingModel(THREE, teachingBuildingGroup);
+            group.add(teachingBuildingGroup);
+
+            const gymnasiumGroup = new THREE.Group();
+            gymnasiumGroup.name = "体育馆模型";
+            gymnasiumGroup.position.set(0.00, 0.30, -61.22);
+            gymnasiumGroup.scale.set(1.7, 1.7, 1.7);
+            buildGymnasiumModel(THREE, gymnasiumGroup);
+            group.add(gymnasiumGroup);
+
+            const volleyballGroup = new THREE.Group();
+            volleyballGroup.name = "排球场模型";
+            volleyballGroup.position.set(203.51, 0.30, -120.45);
+            volleyballGroup.scale.set(1.3, 1.3, 1.3);
+            buildMyVolleyballScene(THREE, volleyballGroup);
+            group.add(volleyballGroup);
+
+            const gateGroup = new THREE.Group();
+            gateGroup.name = "校门模型";
+            gateGroup.position.set(0.00, 0.30, 469.09);
+            gateGroup.scale.set(1.5, 1.5, 1.5);
+            buildGateModel(THREE, gateGroup);
+            group.add(gateGroup);
+
+            const dormitoryGroup = new THREE.Group();
+            dormitoryGroup.name = "宿舍楼模型";
+            dormitoryGroup.position.set(171.40, 0.30, -320.42);
+            dormitoryGroup.rotation.set(0.00, Math.PI / 2, 0.00);
+            dormitoryGroup.scale.set(2, 2, 2);
+            buildDormitoryModel(THREE, dormitoryGroup);
+            group.add(dormitoryGroup);
+        }
         const container = document.getElementById('app');
-        window.initModelEditor(container, buildMySchoolScene);
+        window.initModelEditor(container, buildCombinedScene);
     </script>
 </body>
 </html>

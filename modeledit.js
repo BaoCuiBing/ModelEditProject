@@ -273,9 +273,9 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
         const container = document.getElementById('canvas-container'); // 获取画布容器
         scene = new THREE.Scene(); // 创建场景
         scene.background = new THREE.Color(htmlEl.classList.contains('dark') ? 0x0a0f1d : 0xedf2f7); // 设置场景背景色
-        camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 10000); // 创建透视相机(far=10000防止缩小视角时模型被裁剪)
+        camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 10000); // 创建透视相机(near=1/far=10000；near不宜过小，near/far比值越大深度缓冲精度越高)
         camera.position.copy(targetCamPos); // 设置相机初始位置
-        renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('viewport'), antialias: true }); // 创建渲染器
+        renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('viewport'), antialias: true, logarithmicDepthBuffer: true }); // 创建渲染器（logarithmicDepthBuffer=true 使用对数深度缓冲，大幅提升远近深度精度，彻底改善Z-Fighting闪动）
         renderer.setSize(container.clientWidth, container.clientHeight); // 设置渲染尺寸
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 设置像素比
         renderer.shadowMap.enabled = true; // 开启阴影
@@ -325,6 +325,7 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
         if (buildSceneCallback) { // 存在构建回调
             console.log('[ModelEditor] 调用场景构建回调:', buildSceneCallback.name || 'anonymous'); // 打印回调名称
             buildSceneCallback(THREE, parkMasterGroup); // 调用场景构建函数
+            cleanDuplicateLights(parkMasterGroup); // 加载后去除重复光照，只留一套光照
             console.log('[ModelEditor] 场景构建完成，子对象数:', parkMasterGroup.children.length); // 打印子对象数量
         }
         buildOutlinerTree(); // 构建大纲树
@@ -651,7 +652,24 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
         console.warn('[模型导入] 未扫描到任何 build 开头且双参的全局函数'); // 打印警告
         return null; // 返回空
     }
-    // 销毁旧场景组并用新构建函数重建
+    function cleanDuplicateLights(targetGroup) { // 去除重复光照，只留一套光照
+        const lightsSeen = {}; // 记录已保留的光照类型
+        const lightsToRemove = []; // 待移除的重复光照对象
+        targetGroup.traverse((obj) => { // 遍历所有子节点
+            if (obj.isLight) { // 判断是否为光照对象
+                const lightType = obj.type || 'Light'; // 获取光照类型
+                if (lightsSeen[lightType]) { // 已存在该类型的光照
+                    lightsToRemove.push(obj); // 记录待移除
+                } else { // 首次遇到该类型光照
+                    lightsSeen[lightType] = true; // 标记已保留
+                }
+            }
+        });
+        lightsToRemove.forEach((light) => { // 逐个移除重复光照
+            console.log('[ModelEditor] 移除重复光照:', light.name || light.type); // 打印移除日志
+            if (light.parent) light.parent.remove(light); // 从父组中移除
+        });
+    }
     function rebuildScene(buildFn) { // 重建场景
         if (parkMasterGroup) { // 存在旧主组
             console.log('[模型导入] 移除旧场景，子对象数:', parkMasterGroup.children.length); // 打印旧场景信息
@@ -670,6 +688,7 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
         if (buildFn) { // 存在构建函数
             console.log('[模型导入] 调用构建函数:', buildFn.name); // 打印函数名
             buildFn(THREE, parkMasterGroup); // 调用构建函数
+            cleanDuplicateLights(parkMasterGroup); // 加载后去除重复光照，只留一套光照
             console.log('[模型导入] 构建完成，场景子对象数:', parkMasterGroup.children.length); // 打印构建结果
         }
         // 统一关闭所有网格/线对象的视锥体裁切，防止缩小视角时大模型被误判剔除
