@@ -59,6 +59,10 @@ window.initModelEditor = function(containerElement, buildSceneCallback) { // 编
                 </div>
             </div>
             <input type="file" id="model-file-input" accept=".js" class="hidden" onchange="handleModelFileSelected(this.files[0])">
+            <button onclick="exportGLB()" class="btn btn-secondary text-xs" title="导出当前场景为 GLB">
+                <i data-lucide="download" class="w-4 h-4 text-sky-500"></i>
+                <span>导出 GLB</span>
+            </button>
             <button id="toggle-theme" class="btn btn-secondary !w-9 !p-0 rounded-lg" title="切换主题">
                 <i data-lucide="moon" class="w-4 h-4"></i>
             </button>
@@ -160,9 +164,10 @@ window.initModelEditor = function(containerElement, buildSceneCallback) { // 编
         loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"), // 加载 Three.js 核心库
         loadScript("https://unpkg.com/lucide@latest") // 加载 Lucide 图标库
     ]).then(() => { // 基础库加载完成后
-        return Promise.all([ // 继续并行加载 Three.js 扩展控件
+        return Promise.all([ // 继续并行加载 Three.js 扩展控件与导出器
             loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"), // 加载轨道控制器
-            loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js") // 加载变换控制器
+            loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"), // 加载变换控制器
+            loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js") // 加载 GLTF 导出器
         ]);
     }).then(() => { // 全部依赖加载完成后
         runEditorLogic(buildSceneCallback); // 启动编辑器核心逻辑
@@ -183,6 +188,7 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
     window.appendImportModel = appendImportModel; // 暴露附加导入方法
     window.toggleImportMenu = toggleImportMenu; // 暴露导入下拉菜单切换方法
     window.handleModelFileSelected = handleModelFileSelected; // 暴露文件选择处理方法
+    window.exportGLB = exportGLB; // 暴露导出 GLB 方法
     lucide.createIcons(); // 初始化 Lucide 图标
     const htmlEl = document.documentElement; // 获取根 html 元素
     document.getElementById('toggle-theme').addEventListener('click', () => { // 绑定主题切换按钮
@@ -202,8 +208,8 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
     let parkMasterGroup; // 场景主组
     let selectedObject = null; // 当前选中对象
     let highlightHelper = null; // 高亮辅助框
-    let targetCamPos = new THREE.Vector3(0, 24, 28); // 相机目标位置
-    let targetCamLookAt = new THREE.Vector3(0, 0.8, 0); // 相机注视目标
+    let targetCamPos = new THREE.Vector3(-859.7, 643.7, -134.8); // 相机目标位置(全景视角)
+    let targetCamLookAt = new THREE.Vector3(0, 0, 0); // 相机注视目标中心
     let isFlying = false; // 相机飞行动画开关
     let importMode = 'replace'; // 导入模式：'replace' 重建场景 / 'append' 附加到现有场景
     // 保存对象的当前状态（用于撤回）
@@ -482,7 +488,7 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
     }
     function resetCamera() { // 复位相机视角
         clearSelection(); // 清除选中
-        flyTo(0, 24, 28, 0, 0.8, 0); // 飞行到默认视角
+        flyTo(-859.7, 643.7, -134.8, 0, 0, 0); // 飞行到全景视角
     }
     // 触发隐藏的文件选择器
     function importModel() { // 打开模型文件选择器（重建场景模式）
@@ -518,6 +524,32 @@ function runEditorLogic(buildSceneCallback) { // 编辑器核心逻辑：初始�
     function closeImportMenu() { // 关闭导入菜单
         const menu = document.getElementById('import-menu'); // 获取菜单元素
         if (menu) menu.classList.add('hidden'); // 隐藏菜单
+    }
+    // 导出当前场景为 GLB 模型文件
+    function exportGLB() { // 导出 GLB 模型
+        if (!parkMasterGroup || parkMasterGroup.children.length === 0) { // 场景为空时提示
+            showToast('场景为空，无内容可导出'); // 显示空场景提示
+            return; // 提前结束
+        }
+        try { // 开始导出
+            const exporter = new THREE.GLTFExporter(); // 创建 GLTF 导出器
+            const exportGroup = parkMasterGroup.clone(); // 克隆主组用于导出
+            exporter.parse(exportGroup, function(gltf) { // 执行导出解析
+                const blob = new Blob([gltf], { type: 'application/octet-stream' }); // 生成二进制 Blob
+                const url = URL.createObjectURL(blob); // 创建临时下载链接
+                const link = document.createElement('a'); // 创建下载链接元素
+                link.href = url; // 设置链接地址
+                link.download = 'scene.glb'; // 设置默认文件名
+                document.body.appendChild(link); // 追加到页面
+                link.click(); // 触发下载
+                document.body.removeChild(link); // 移除链接元素
+                URL.revokeObjectURL(url); // 释放对象 URL
+                showToast('GLB 导出成功'); // 显示成功提示
+            }, { binary: true }); // 指定导出为二进制 GLB 格式
+        } catch (err) { // 导出过程出错
+            console.error('[GLB 导出] 导出失败:', err); // 打印错误日志
+            showToast('GLB 导出失败: ' + err.message); // 显示失败提示
+        }
     }
     // 点击页面其他区域时关闭导入下拉菜单
     document.addEventListener('click', (e) => { // 绑定全局点击
